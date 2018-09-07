@@ -11,7 +11,7 @@ const app         = express()
 const port    = process.env.PORT || 8080;
 
 // convert to read this from Env setting
-let deposit_address_list = addy.getAddressList('nem');
+let deposit_address_list = addy.getAddressList('xrp');
 const update_url         = process.env.API_UPDATE_URL;
 
 // parse application/json
