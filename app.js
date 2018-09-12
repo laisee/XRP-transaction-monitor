@@ -10,6 +10,9 @@ const app         = express()
 // assign app settings from envirtonment || default values
 const port    = process.env.PORT || 8080;
 
+// Divisor to get round number of XRP received
+var DIVISOR = 1000000;
+
 // convert to read this from Env setting
 let deposit_address_list = addy.getAddressList('xrp');
 const update_url         = process.env.API_UPDATE_URL;
@@ -36,38 +39,38 @@ app.post('/transaction/update', function(req, res) {
   const errors = [];
   const promises = [];
   for (var address of deposit_address_list) {
-    let url = 'http://'+ nem_server + '/account/transfers/incoming?address=' + address;
+    let url = 'https://data.ripple.com/v2/accounts/'+ address + '/transactions/?type=Payment';
     console.log("processing deposit address "+address+" by checking URL "+url);
     var options = { uri: url, json: true };
     promises.push(rp(options)
       .then(function(body) {
-        if (body && body.data.length > 0) {
-          for (var txn of body.data) {
-            let data = {};
-            let address = txn.address;
-            console.log("Tx is "+txn.meta.id+" with hash "+txn.meta.hash.data);
-            console.log("Tx amount was "+txn.transaction.amount+" sent by "+address);
-            data["wallet_address"] = nemsdk.model.address.toAddress(txn.transaction.signer, 104);
-            data["tx_id"] = txn.meta.id;
-            data["tx_hash"] = txn.meta.hash.data;
-            data["amount"] = txn.transaction.amount;
-            data["currency"] = 'XRP';
-            count++;
-            total += txn.value;
-            request.post({
-              url: update_url,
-              method: "POST",
-              json: true,
-              body: data
-            },
-            function (error, response, body) {
-              if (response.statusCode == 200) {
-                console.log("Updated "+ data.tx_hash+ " successfully for sender "+data.wallet_address);
-              } else {
-                console.log("Update of txn "+txn.meta.hash.data+ " failed wallet"+nemsdk.model.address.toAddress(txn.transaction.signer, 104)+" Status "+response.statusCode);
-                errors.push("Error " +response.statusCode+"  while updating wallet "+error);
-              }
-            });
+       const txdata = JSON.parse(body);
+       if (txdata && txdata.transactions.length > 0) {
+         for (var txn of txdata.transactions) {
+           if (txn.tx.Account != address) {
+             let data = {};
+             data["currency"] = 'XRP';
+             data["tx_id"] = txn.hash;
+             data["tx_hash"] = txn.hash;
+             data["wallet_address"] = txn.tx.Account;
+             data["amount"] = Number(txn.tx.Amount/DIVISOR).toFixed(2);
+             count++;
+             total += Number(txn.tx.Amount/DIVISOR).toFixed(2);
+             request.post({
+               url: update_url,
+               method: "POST",
+               json: true,
+               body: data
+             },
+             function (error, response, body) {
+               if (response.statusCode == 200) {
+                 console.log("Updated "+ data.tx_hash+ " successfully for sender "+data.wallet_address);
+               } else {
+                 console.log("Update of txn "+txn.hash+ " failed wallet"+txn.tx.Account+" Status "+response.statusCode);
+                 errors.push("Error " +response.statusCode+"  while updating wallet "+error);
+                }
+              });
+             }
           }
           console.log("Process "+count+" transactions for a total of "+total+" XRP");
         } else {
