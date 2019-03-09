@@ -31,7 +31,7 @@ app.get('/', function(req, res) {
 });
 
 //
-// Retrieve transaction sent to Abele XRP addresses
+// Retrieve transaction sent to monitored XRP addresses
 //
 app.post('/transaction/update', function(req, res) {
   let count = 0;

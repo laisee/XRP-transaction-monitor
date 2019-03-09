@@ -1,5 +1,5 @@
 # XRP-transaction-monitor
-Heroku node.js app for monitoing one or more XRP address for transactions
+Heroku node.js app for monitoring one or more XRP address for transactions
 
 Instructions:
 
